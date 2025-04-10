@@ -11,6 +11,7 @@ const Home = () => {
   const [error, setError] = useState(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userEmail, setUserEmail] = useState('');
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
     checkLoginStatus();
@@ -22,11 +23,15 @@ const Home = () => {
       const response = await axios.get('http://localhost:5000/me', {
         withCredentials: true
       });
+      console.log('User data:', response.data);
       setIsLoggedIn(true);
       setUserEmail(response.data.email);
+      setUser(response.data);
     } catch (error) {
+      console.error('Error checking login status:', error);
       setIsLoggedIn(false);
       setUserEmail('');
+      setUser(null);
     }
   };
 
@@ -91,11 +96,15 @@ const Home = () => {
                   <figure className="image is-32x32 mr-2">
                     <img 
                       className="is-rounded" 
-                      src="https://ui-avatars.com/api/?name=User&background=0095DA&color=fff" 
-                      alt="Profile"
+                      src={user?.img_user ? `http://localhost:5000/images/users/${user.img_user}` : `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.email || 'User')}&background=0095DA&color=fff`} 
+                      alt={user?.email || 'User'}
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.email || 'User')}&background=0095DA&color=fff`;
+                      }}
                     />
                   </figure>
-                  <span className="has-text-weight-medium" style={{ color: "#0095DA" }}>{userEmail}</span>
+                  <span className="has-text-weight-medium" style={{ color: "#0095DA" }}>{user?.email}</span>
                 </div>
               </div>
               <a className="navbar-item" href="/pesanan">

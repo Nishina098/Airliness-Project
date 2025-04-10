@@ -30,7 +30,7 @@ export const getTransaksi = async (req, res) => {
                     {
                         model: Users,
                         as: 'user',
-                        attributes: ['nm_user']
+                        attributes: ['email_user', 'img_user']
                     },
                     {
                         model: Penerbangan,
@@ -60,6 +60,18 @@ export const getTransaksi = async (req, res) => {
             where: {
                 uuid_user: userId
             },
+            include: [
+                {
+                    model: Users,
+                    as: 'user',
+                    attributes: ['email_user', 'img_user']
+                },
+                {
+                    model: Penerbangan,
+                    as: 'penerbangan',
+                    attributes: ['kode_penerbangan', 'maskapai']
+                }
+            ],
             order: [['tanggal_transaksi', 'DESC']]
         });
 
@@ -111,6 +123,23 @@ export const createTransaksi = async (req, res) => {
     } = req.body;
 
     try {
+        // Cek kapasitas penerbangan
+        const penerbangan = await Penerbangan.findOne({
+            where: {
+                id: id_penerbangan
+            }
+        });
+
+        if (!penerbangan) {
+            return res.status(404).json({ msg: "Penerbangan tidak ditemukan" });
+        }
+
+        // Cek apakah kapasitas mencukupi
+        if (penerbangan.kapasitas < jumlah_tiket) {
+            return res.status(400).json({ msg: "Kapasitas penerbangan tidak mencukupi" });
+        }
+
+        // Buat transaksi
         const transaksi = await Transaksi.create({
             uuid_user,
             id_penerbangan,
@@ -121,6 +150,9 @@ export const createTransaksi = async (req, res) => {
             status_pembayaran,
             status_tiket
         });
+
+        // Tidak mengurangi kapasitas saat pemesanan
+        // Kapasitas akan berkurang saat admin mengkonfirmasi pembayaran
 
         res.status(201).json({ 
             msg: "Data Transaksi berhasil ditambahkan",
@@ -141,6 +173,13 @@ export const updateTransaksi = async (req, res) => {
         where: {
             id_transaksi: req.params.id
         },
+        include: [
+            {
+                model: Penerbangan,
+                as: 'penerbangan',
+                attributes: ['id', 'kapasitas']
+            }
+        ]
     });
     
     if (!transaksi) {
@@ -151,6 +190,45 @@ export const updateTransaksi = async (req, res) => {
     if (req.session.role === "administrator") {
         const { status_pembayaran, status_tiket } = req.body;
         try {
+            // Jika admin mengkonfirmasi pembayaran (status_pembayaran = 'berhasil' dan status_tiket = 'aktif')
+            if (status_pembayaran === 'berhasil' && status_tiket === 'aktif') {
+                // Cek apakah kapasitas mencukupi
+                if (transaksi.penerbangan.kapasitas < transaksi.jumlah_tiket) {
+                    return res.status(400).json({ msg: "Kapasitas penerbangan tidak mencukupi" });
+                }
+                
+                // Kurangi kapasitas penerbangan
+                await Penerbangan.update(
+                    {
+                        kapasitas: transaksi.penerbangan.kapasitas - transaksi.jumlah_tiket
+                    },
+                    {
+                        where: {
+                            id: transaksi.penerbangan.id
+                        }
+                    }
+                );
+            }
+            
+            // Jika admin menolak pembayaran (status_pembayaran = 'gagal')
+            if (status_pembayaran === 'gagal') {
+                // Jika sebelumnya tiket aktif, kembalikan kapasitas
+                if (transaksi.status_tiket === 'aktif') {
+                    // Kembalikan kapasitas penerbangan
+                    await Penerbangan.update(
+                        {
+                            kapasitas: transaksi.penerbangan.kapasitas + transaksi.jumlah_tiket
+                        },
+                        {
+                            where: {
+                                id: transaksi.penerbangan.id
+                            }
+                        }
+                    );
+                }
+            }
+            
+            // Update status transaksi
             await Transaksi.update(
                 {
                     status_pembayaran,
@@ -316,7 +394,7 @@ export const getRiwayatTransaksi = async (req, res) => {
                 {
                     model: Users,
                     as: 'user',
-                    attributes: ['nm_user']
+                    attributes: ['email_user']
                 },
                 {
                     model: Penerbangan,
@@ -359,7 +437,7 @@ export const getRiwayatTransaksiMaskapai = async (req, res) => {
                 {
                     model: Users,
                     as: 'user',
-                    attributes: ['nm_user']
+                    attributes: ['email_user']
                 },
                 {
                     model: Penerbangan,

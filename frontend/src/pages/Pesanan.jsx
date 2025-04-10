@@ -106,6 +106,22 @@ const Pesanan = () => {
                     </h2>
                     
                     <div className="mb-4">
+                      <div className="is-flex is-align-items-center mb-3">
+                        <figure className="image is-48x48 mr-3">
+                          <img 
+                            className="is-rounded" 
+                            src={item.user?.img_user ? `http://localhost:5000/images/users/${item.user.img_user}` : `https://ui-avatars.com/api/?name=${encodeURIComponent(item.user?.email_user || 'User')}&background=0095DA&color=fff`} 
+                            alt={item.user?.email_user || 'User'}
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(item.user?.email_user || 'User')}&background=0095DA&color=fff`;
+                            }}
+                          />
+                        </figure>
+                        <div>
+                          <p className="has-text-weight-bold">{item.user?.email_user || 'User'}</p>
+                        </div>
+                      </div>
                       <p><strong>Status:</strong> 
                         <span className={`tag ${item.status_pembayaran === 'pending' ? 'is-warning' : 
                                         item.status_pembayaran === 'berhasil' ? 'is-success' : 'is-danger'}`}>
@@ -113,7 +129,13 @@ const Pesanan = () => {
                            item.status_pembayaran === 'berhasil' ? 'Pembayaran Berhasil' : 'Pembayaran Gagal'}
                         </span>
                       </p>
-                      <p><strong>Tanggal Pemesanan:</strong> {new Date(item.tanggal_pemesanan).toLocaleDateString('id-ID')}</p>
+                      <p><strong>Tanggal Pemesanan:</strong> {new Date(item.tanggal_transaksi).toLocaleDateString('id-ID', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}</p>
                       <p><strong>Jumlah Tiket:</strong> {item.jumlah_tiket}</p>
                       <p><strong>Total Harga:</strong> {formatPrice(item.total_harga)}</p>
                       <p><strong>Metode Pembayaran:</strong> {item.metode_pembayaran}</p>

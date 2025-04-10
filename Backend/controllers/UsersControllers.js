@@ -2,6 +2,7 @@ import Users from "../models/UsersModels.js";
 import argon2 from "argon2";
 import path from "path";
 import fs from "fs";
+import bcrypt from "bcrypt";
 
 export const getUsers = async (req, res) => {
     try {
@@ -207,5 +208,109 @@ export const deleteUsers = async (req,res) => {
         res.status(200).json({ msg: "Data users berhasil dihapus" });
     } catch (error) {
         res.status(400).json({ msg: error.message});
+    }
+};
+
+export const registerUser = async (req, res) => {
+    try {
+        console.log("Request body:", req.body);
+        const { nm_user, username, email_user, password, confPassword } = req.body;
+
+        // Validasi input
+        if (!nm_user || !username || !email_user || !password || !confPassword) {
+            console.log("Validasi gagal: field kosong");
+            return res.status(400).json({ msg: "Semua field harus diisi" });
+        }
+
+        // Validasi password
+        if (password !== confPassword) {
+            console.log("Validasi gagal: password tidak cocok");
+            return res.status(400).json({ msg: "Password dan konfirmasi password tidak cocok" });
+        }
+
+        // Cek username
+        const existingUser = await Users.findOne({
+            where: {
+                username: username
+            }
+        });
+
+        if (existingUser) {
+            console.log("Validasi gagal: username sudah digunakan");
+            return res.status(400).json({ msg: "Username sudah digunakan" });
+        }
+
+        // Cek email
+        const existingEmail = await Users.findOne({
+            where: {
+                email_user: email_user
+            }
+        });
+
+        if (existingEmail) {
+            console.log("Validasi gagal: email sudah digunakan");
+            return res.status(400).json({ msg: "Email sudah digunakan" });
+        }
+
+        // Hash password menggunakan argon2
+        const hashPassword = await argon2.hash(password);
+
+        let img_user = null;
+        let url_user = null;
+
+        // Handle file upload jika ada
+        if (req.files && req.files.img_user) {
+            const file = req.files.img_user;
+            const fileSize = file.data.length;
+            const ext = path.extname(file.name);
+            const fileName = file.md5 + ext;
+            const allowedType = ['.png', '.jpg', '.jpeg'];
+
+            if (!allowedType.includes(ext.toLowerCase())) {
+                return res.status(422).json({ msg: "Format gambar tidak didukung. Gunakan .png, .jpg, atau .jpeg" });
+            }
+
+            if (fileSize > 5000000) {
+                return res.status(422).json({ msg: "Ukuran gambar terlalu besar. Maksimal 5MB" });
+            }
+
+            img_user = fileName;
+            url_user = `${req.protocol}://${req.get("host")}/images/users/${fileName}`;
+
+            // Pindahkan file
+            file.mv(`./public/images/users/${fileName}`, (err) => {
+                if (err) {
+                    console.error("Error saat memindahkan file:", err);
+                    return res.status(500).json({ msg: "Gagal mengupload gambar" });
+                }
+            });
+        }
+
+        // Buat user baru
+        console.log("Membuat user baru...");
+        const newUser = await Users.create({
+            nm_user: nm_user,
+            username: username,
+            email_user: email_user,
+            password: hashPassword,
+            img_user: img_user,
+            url_user: url_user,
+            role: "user" // Default role untuk user baru
+        });
+        console.log("User baru berhasil dibuat:", newUser);
+
+        res.status(201).json({
+            msg: "Pendaftaran berhasil",
+            user: {
+                uuid: newUser.uuid,
+                nm_user: newUser.nm_user,
+                username: newUser.username,
+                email_user: newUser.email_user,
+                role: newUser.role
+            }
+        });
+    } catch (error) {
+        console.error("Error saat registrasi:", error);
+        res.status(500).json({ msg: "Terjadi kesalahan saat mendaftar" });
     }
 };

@@ -83,20 +83,20 @@ export const Me = async (req, res) => {
 
     try {
         let user = await Users.findOne({
-            attributes: ["uuid", "nm_user", "email_user", "role"],
+            attributes: ["uuid", "nm_user", "email_user", "role", "img_user"],
             where: { uuid: req.session.userId }
         });
 
         if (!user) {
             user = await Admin.findOne({
-                attributes: ["uuid", "nm_admin", "email_admin", "role"],
+                attributes: ["uuid", "nm_admin", "email_admin", "role", "img_admin"],
                 where: { uuid: req.session.userId }
             });
         }
 
         if (!user) {
             user = await Maskapai.findOne({
-                attributes: ["uuid", "nama_maskapai", "email", "role"],
+                attributes: ["uuid", "nama_maskapai", "email", "role", "logo_maskapai"],
                 where: { uuid: req.session.userId }
             });
         }
@@ -107,8 +107,9 @@ export const Me = async (req, res) => {
         const response = {
             uuid: user.uuid,
             role: user.role,
-            email: user.email_user || user.email_admin || user.email, // Ambil email sesuai jenis user
-            name: user.nm_user || user.nm_admin || user.nama_maskapai // Ambil nama sesuai jenis user
+            email: user.email_user || user.email_admin || user.email,
+            name: user.nm_user || user.nm_admin || user.nama_maskapai,
+            img_user: user.img_user || user.img_admin || user.logo_maskapai
         };
 
         res.status(200).json(response);
