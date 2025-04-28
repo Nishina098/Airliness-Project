@@ -1,0 +1,38 @@
+.input {
+    background-color: white !important;
+    border: 1px solid #ddd !important;
+    box-shadow: none !important;
+  }
+  
+  .input:focus {
+    border-color: #0095DA !important;
+    box-shadow: 0 0 5px rgba(0, 149, 218, 0.5) !important;
+  }
+  
+  .input::placeholder {
+    color: grey !important;
+  }
+
+  .span {
+    background-color: white;
+  }
+
+.sidebar-link:hover {
+    color: #007bff;
+    transition: color 0.3s;
+}
+
+.logout-button:hover {
+    background-color: #f8d7da;
+    color: #721c24;
+    transition: background-color 0.3s, color 0.3s;
+}
+.navbar {
+    z-index: 1000;
+}
+
+.navbar-logout-button:hover {
+    background-color: #ff4757;
+    color: white;
+    transition: background-color 0.3s, color 0.3s;
+}
